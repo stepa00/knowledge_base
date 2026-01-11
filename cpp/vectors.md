@@ -488,6 +488,461 @@ auto it = std::max_element(vec_int.begin(), vec_int.end(), [](int a, int b) {
 std::cout << "Максимальный элемент по модулю: " << *it << std::endl;
 ```
 
+## Coparing
+
+Vectors can be compared lexicographically:
+
+```cpp
+std::vector<int> v1 = {1, 2, 3};
+std::vector<int> v2 = {3, 2, 1};
+
+std::cout << v1 > v2 << std::endl;
+// result: false
+```
+
+, another example:
+
+```cpp
+std::vector<std::string> v1{"I", "love", "C++"};
+std::vector<std::string> v2{"I", "love", "C++", "very", "much"};
+
+std::cout << std::boolalpha;
+
+// Вектор v1 – префикс v2 и поэтому v1 меньше.
+std::cout << "v1 < v2: " << (v1 < v2) << std::endl; // true.
+```
+
+### Coparing with iterators
+
+- `std::equal`
+
+- `std::lexicographical_compare`
+
+- `std::lexicographical_compare_three_way`
+
+#### std::equal
+
+Check if word if written backwords the same way, as forwards:
+
+```cpp
+std::string s;
+std::cin >> s;
+
+// Такой алгоритм не будет работать для русского языка,
+// но проблему решит QString.
+if (std::equal(s.begin(), s.end(), s.rbegin(), s.rend())) {
+    std::cout << "Строка " << s << " - палиндром!" << std::endl;
+} else {
+    std::cout << "Увы, строка " << s << " не палиндром" << std::endl;
+}
+```
+
+Check if vector is a prefix of another vector:
+
+```cpp
+template<class T>
+bool CheckPrefix(const std::vector<T>& prefix, const std::vector<T>& full) {
+    // Префикс не может быть длиннее всей строки.
+    if (prefix.size() > full.size()) {
+        return false;
+    }
+    
+    // Сравниваем вектор prefix с началом вектора full
+    // длины prefix.size().
+    return std::equal(prefix.begin(), prefix.end(), 
+          full.begin(), full.begin() + prefix.size());
+}
+```
+
+### std::sort
+
+Use case sorting sailing teams (by less points):
+
+```cpp
+struct Team {
+    // overload comparison
+    auto operator<=>(const Team& other) const {
+        return points <=> other.points;
+    }
+    
+    std::string name;
+    int points;
+};
+
+// using standart comparison std::less, no extra coparator needed
+std::vector<Team> teams;
+teams.push_back({.name = "Team1", .points = 5});
+teams.push_back({.name = "Team2", .points = 2});
+teams.push_back({.name = "Team3", .points = 26});
+teams.push_back({.name = "Team4", .points = 18});
+
+std::sort(teams.begin(), teams.end());
+```
+
+To reverse the list of winners use `std::reverse`:
+
+```cpp
+std::reverse(teams.begin(), teams.end());
+```
+
+It is prefered to use correct comporator from the beginning
+instead of using reverse after sort.
+
+## Remove selected elements from vector
+
+Task to remove all dublicates from the vector:
+
+```cpp
+std::vector<int> GetUnique(const std::vector<int>& src) {
+    std::vector<int> result;
+    for (auto i : src) {
+        // Добавляем элемент, если его ещё нет в result.
+        if (std::find(result.begin(), result.end(), i) == result.end()) {
+            result.push_back(i);
+        }
+    }
+    return result;
+}
+```
+
+, this one is **slow**. Another option, first sort vector:
+
+### std::unique
+
+```cpp
+std::vector<int> GetUniqueOfSorted(const std::vector<int>& src) {
+    if (src.empty()) {
+        return {};
+    }
+    
+    std::vector<int> result;
+    result.push_back(src.front());
+    for (auto iter = src.begin() + 1; iter != src.end(), ++iter) {
+        // Если элемент не равен предыдущему добавим его.
+        if (*iter != *(iter - 1)) {
+            result.push_back(*iter);
+        }
+    }
+    return result;
+}
+```
+
+Another standard option is `std::unique` than moves dublicats to the end
+of the vector, where they can be removed. Example:
+
+```cpp
+auto to_del = std::unique(some_vec.begin(), some_vec.end());
+// to_del iterator point to the first of dublicates at the end of the
+// vector, where next it is easily erased
+some_vec.erase(to_del, some_vec.end())
+```
+
+### std::remove / remove_if
+
+Those algorithms move selected elements to the end of the vector and
+return iterator pointing to them. Example:
+
+```cpp
+std::vector<int> vec = {4, 2, 6, 3, 1, 5, 3, 2, 15, 0, 3, 1};
+
+// Удалим двойки.
+auto to_del = std::remove(vec.begin(), vec.end(), 2);
+vec.erase(to_del, vec.end());
+// vec == {4, 6, 3, 1, 5, 3, 15, 0, 3, 1};
+
+// Удалим нечётные числа.
+auto to_del2 = std::remove_if(vec.begin(), vec.end(), [](int i){
+    return i % 2 != 0;
+});
+vec.erase(to_del2, vec.end());
+// vec == {4, 6, 0};
+```
+
+## Generating random
+
+Example of pseudo random vector:
+
+```cpp
+// Создадим генератор.
+std::mt19937 gen;
+
+// Нам нужны числа от 1 до 1 000 000.
+std::uniform_int_distribution<> dist(1, 1'000'000);
+
+// Создаём вектор для хранения случайных чисел из пяти элементов.
+std::vector<int> random_numbers(5);
+
+// И заполним его случайными числами.
+for (auto& num : random_numbers) {
+    num = dist(gen);
+}
+```
+
+, this wil always generate the same sequence, to change it - 
+change the seed:
+
+```cpp
+// Используем сид 1:
+std::mt19937 gen(1);
+
+std::uniform_int_distribution<> dist(1, 1'000'000);
+std::vector<int> random_numbers(5);
+for (auto& num : random_numbers) {
+    num = dist(gen);
+}
+
+// Теперь в векторе будут числа 417022, 997185, 720325, 932558, 115.
+```
+
+, but *seed* is not random, add system randomize, which is
+slow and not recomended for generation of vector number but
+good anough for seed generation:
+
+```cpp
+// Аппаратный генератор случайного значения:
+std::random_device rd;   
+
+// Инициализация начальным значением, полученным от аппаратного генератора:
+std::mt19937 gen(rd());
+```
+
+### Shuffle vector elements
+
+`std::shuffle`
+
+```cpp
+// Заполним вектор значениями.
+std::vector<int> numbers{1, 2, 3, 4, 5, 6};
+
+// Создание генератора со случайным начальным значением.
+std::random_device rd;  
+std::mt19937 gen_shuffle(rd());
+
+// Перемешаем элементы в векторе.
+std::shuffle(numbers.begin(), numbers.end(), gen_shuffle);
+```
+
+, result will be `numbers` vector with different arrangement of
+elements.
+
+## Filling up vectors
+
+```cpp
+// Десять единиц:
+std::vector<int> v_nums_one(10, 1);
+
+// Вектор из ста фраз "Do it, just do it!":
+std::vector<std::string> just_do_it(100, "Do it, just do it!");
+
+// Вектор из 42-х других векторов:
+std::vector<std::vector<int>> one_two_three(42, std::vector{1, 2, 3});
+```
+
+Show case of a meandr of 48000 count per second and frequency of 240 Hz:
+
+```cpp
+// Создадим вектор из 48 000 нулей.
+std::vector<int16_t> signal(48000, 0);
+
+int pos = 0;
+int16_t current_elem = 10000;
+
+for(auto& elem: signal) {
+    // Если дошли до 100-го, меняем знак и сбрасываем счётчик.
+    if (pos++ == 100) {
+        pos = 0;
+        current_elem = -current_elem;
+    }
+    
+    // Меняем элемент вектора.
+    elem = current_elem;
+}
+
+// OR 
+
+for(auto& elem: signal) {
+    elem = ((pos++) % 200 < 100) ? current_elem : -current_elem;
+}
+```
+
+### std::fill
+
+Fills vector according to repeated logic. Between two iterators fills
+vector with third value.
+
+```cpp
+// Конструктор создаст вектор из 20 букв a:
+vector<string> repeat(20, "a");
+
+// Напечатаем 20 a:
+PrintVector(repeat);
+
+// Заполним вектор буквами b и напечатаем 20 букв b:
+std::fill(repeat.begin(), repeat.end(), "b");
+PrintVector(repeat);
+
+// Заполним начало буквами c и напечатаем 10 букв c и 10 букв b:
+std::fill(repeat.begin(), repeat.begin() + 10, "c");
+PrintVector(repeat);
+```
+
+Back to meander:
+
+```cpp
+std::vector<int> meander(48000, 0);
+
+// Заполним первые 200 отсчётов – одиночный меандр.
+std::fill(meander.begin(), meander.begin() + 100, 10000);
+std::fill(meander.begin() + 100, meander.begin() + 200, -10000);
+```
+
+> If vector of size 10 fill with size 100 that will create undefined
+> behaviour. `std::fill` can not create new elements and change size
+> of a vector.
+
+`std::fill_n` - instead of second iterator takes number of elements.
+
+```cpp
+std::fill_n(meander.begin(), 100, 10000);
+```
+
+### std::copy_n
+
+Accepts iterator to start, number of elements and where to copy.
+
+```cpp
+const int wave_length = 200;
+for (size_t offset = wave_length;
+    offset < signal.size(); 
+    offset += wave_length) {
+    
+    // Копируем первые wave_length элементов в позицию offset.
+    std::copy_n(meander.begin(), wave_length, signal.begin() + offset);
+}
+```
+
+, there is an issue with this one, destination smaller than copied unit.
+Safer version:
+
+```cpp
+ for (size_t offset = wave_length;
+      offset < signal.size();
+      // Не делаем инкремент здесь.
+     ) {
+     
+     // Определим, сколько максимально можем скопировать.
+     int max_copy = signal.size() - offset;
+     
+     // Сколько нужно скопировать: wave_length элементов,
+     // но не больше max_copy.
+     auto to_copy = std::min(wave_length, max_copy);
+     
+     // Теперь копируем не wave_length, а to_copy.
+     std::copy_n(meander.begin(), to_copy, signal.begin() + offset);
+
+     // Сделаем инкремент здесь.
+     offset += to_copy;
+ }
+```
+
+### std::copy
+
+Takes:
+
+1. start iterator
+2. end iterator
+3. place to copy to
+
+```cpp
+assert(the_best.size() <= description.size()); // Иначе неопределённое поведение.
+std::copy(the_best.begin(), the_best.end(), description.begin());
+```
+
+### std::back_inserter
+
+`std::back_inserter` creates a special output iterator that appends values to the end
+of a container instead of writing into existing elements. When an algorithm assigns a 
+value to this iterator, it internally calls `container.push_back(value)`.
+
+```cpp
+//  Создадим вектор без указания количества элементов:
+std::vector<int16_t> signal;
+
+// Добавим 100 чисел 10000 в signal.
+std::fill_n(std::back_inserter(signal), 100, 10000);
+// Добавим ещё 100 чисел -10000.
+std::fill_n(std::back_inserter(signal), 100, -10000);
+
+std::cout << signal.size();
+// Результат вывода на печать: 200.
+```
+
+```cpp
+
+```
+
+, for this function to work we need to add this part before:
+
+```cpp
+//  Создадим вектор без указания количества элементов:
+std::vector<int> signal;
+signal.reserve(48000);
+
+// Добавим 100 чисел 10000 в signal.
+...
+```
+
+## Functional style
+
+### std::generate_n
+
+`std::generate_n` - Call this function N times and write each returned value 
+into the container, starting from here. `std::generate_n(output_it, count, generator);`
+
+
+```cpp
+std::vector<int16_t> signal;
+signal.reserve(48000);
+
+const double amplitude = 15000;
+const int wave_length = 200;
+
+// Используем mutable-лямбда функцию. Она может менять захваченные значения.
+// В данном случае меняем i, который инициализируем в 
+// квадратных скобках: i = 0.
+auto generator = [=, i = 0]() mutable {
+    // Возвратим значение. Алгоритм generate_n добавит его
+    // в вектор.
+    return amplitude * sin(2 * i++ * std::numbers::pi / wave_length);
+};
+
+std::generate_n(std::back_inserter(signal), wave_length, generator);
+```
+
+### std::transform
+
+Reads elements from one range -> changes it -> writes into another range.
+
+```cpp
+void ApplyDecay(std::vector<int16_t>& signal, size_t max_length) {
+    size_t decay_length = std::min(signal.size(), max_length);
+
+    // [=] – captures decay_length by value
+    // i = decay_length – initializes a private counter
+    // mutable – allows i to be modified on each call
+
+    auto transformer = [=, i = decay_length](int16_t source) mutable {
+        double factor = double(i--) / decay_length;
+        return static_cast<int16_t>(source * factor);
+    };
+
+    auto start_pos = signal.end() - decay_length;
+    std::transform(start_pos, signal.end(), start_pos, transformer);
+}
+// initial: [ 1000, 1000, 1000, 1000, 1000 ]
+// result: [ 1000,  800,  600,  400,   0 ]
+```
+
 
 
 
